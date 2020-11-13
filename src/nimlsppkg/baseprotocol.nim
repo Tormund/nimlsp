@@ -42,6 +42,7 @@ proc readFrame*(s: Stream): TaintedString =
       of "Content-Type":
         if ln.find("utf-8", valueStart) == -1 and ln.find("utf8", valueStart) == -1:
           raise newException(UnsupportedEncoding, "only utf-8 is supported")
+
       of "Content-Length":
         if parseInt(ln, contentLen, valueStart) == 0:
           raise newException(MalformedFrame, "invalid Content-Length: " &
@@ -62,4 +63,3 @@ proc readFrame*(s: Stream): TaintedString =
           return s.readStr(contentLen)
       else:
         raise newException(MalformedFrame, "missing Content-Length header")
-
