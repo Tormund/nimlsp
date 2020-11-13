@@ -84,29 +84,14 @@ func nimSymDetails*(suggest: Suggest): string =
 func nimDocstring*(suggest: Suggest): string =
   suggest.doc
 
-template debugEcho(args: varargs[string, `$`]) =
-  when defined(debugLogging):
-    stderr.write(join args)
-    stderr.write("\n")
-    # logFile.write(join args)
-    # logFile.write("\n\n")
-    # logFile.flushFile()
-
 template createFullCommand(command: untyped) {.dirty.} =
   proc command*(nimsuggest: NimSuggest, file: string, dirtyfile = "",
             line: int, col: int): seq[Suggest] =
-    try:
-      result = nimsuggest.runCmd(`ide command`, AbsoluteFile file, AbsoluteFile dirtyfile, line, col)
-    except Exception as e:
-      debugEcho "Got suggest error ", e.msg
-
+    result = nimsuggest.runCmd(`ide command`, AbsoluteFile file, AbsoluteFile dirtyfile, line, col)
 
 template createFileOnlyCommand(command: untyped) {.dirty.} =
   proc command*(nimsuggest: NimSuggest, file: string, dirtyfile = ""): seq[Suggest] =
-    try:
-      result = nimsuggest.runCmd(`ide command`, AbsoluteFile file, AbsoluteFile dirtyfile, 0, 0)
-    except Exception as e:
-      debugEcho "Got suggest error2 ", e.msg
+    result = nimsuggest.runCmd(`ide command`, AbsoluteFile file, AbsoluteFile dirtyfile, 0, 0)
 
 createFullCommand(sug)
 createFullCommand(con)
