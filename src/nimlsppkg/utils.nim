@@ -1,6 +1,16 @@
 import messageenums
 import strutils, uri, os, options
 
+const storage = getTempDir() / "nimlsp"
+
+discard existsOrCreateDir(storage)
+
+proc getStorage*(): string = storage
+
+when defined(debugLogging):
+  let logPath = when defined(localLogFile): getAppDir() / "nimlsp.log" else: storage / "nimlsp.log"
+  var logFile = open(logPath, fmWrite)
+
 template debugLog*(args: varargs[string, `$`]) =
   when defined(debugLogging):
     stderr.write(join args)

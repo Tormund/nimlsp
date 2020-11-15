@@ -9,8 +9,6 @@ type
     ServerErrorStart = -32099,
     ServerNotInitialized = -32002,
     ServerErrorEnd = -32000,
-# Anything below here comes from the LSP specification
-type
   DiagnosticSeverity* {.pure.} = enum
     Error = 1,
     Warning = 2,
@@ -101,3 +99,19 @@ type
     Text = 1,
     Read = 2,
     Write = 3
+  MarkupKind* {.pure.} = enum
+    plaintext
+    markdown
+  Trace* {.pure.} = enum
+    off
+    message
+    verbose
+  CodeActionKind* {.pure.} = enum
+    empty = ""
+    quickfix
+    refactor
+    refactorExtract = "refactor.extract"
+    refactorInline = "refactor.inline"
+    refactorRewrite = "refactor.rewrite"
+    source
+    sourceOrganizeImports = "source.organizeImports"

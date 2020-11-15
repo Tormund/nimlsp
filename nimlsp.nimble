@@ -1,12 +1,12 @@
 # Package
 
-version       = "0.2.4"
+version       = "0.3.0"
 author        = "PMunch"
 description   = "Nim Language Server Protocol - nimlsp implements the Language Server Protocol"
 license       = "MIT"
 srcDir        = "src"
 bin           = @["nimlsp"]
-
+installExt    = @["nim"]
 # Dependencies
 
 requires "nim >= 1.0.0"
