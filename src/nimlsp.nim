@@ -133,14 +133,25 @@ registerMessageHandler("textDocument/completion") do(msg: JsonNode) -> JsonNode:
     if i >= sugLimit: break
   result = toMessage(CompletionList(isIncomplete: suggestions.len > sugLimit, `items`: list))
 
-registerMessageHandler("textDocument/hover") do(msg: JsonNode) -> JsonNode:
-  let request = msg.to(TextDocumentHoverRequest)
-  let fileUri = request.params.textDocument.uri
-  let position = request.params.position
-  let suggestions = getNimsuggest(fileUri).def(fileUri.toPath(), dirtyfile = fileUri.stashFile,
-    position.line + 1,
-    position.character
-  )
+# registerMessageHandler("textDocument/hover") do(msg: JsonNode) -> JsonNode:
+#   let request = msg.to(TextDocumentHoverRequest)
+#   let fileUri = request.params.textDocument.uri
+#   let position = request.params.position
+#   let suggestions = getNimsuggest(fileUri).def(fileUri.toPath(), dirtyfile = fileUri.stashFile,
+#     position.line + 1,
+#     position.character
+#   )
+#   debugLog "Found def suggestions: ",
+#     suggestions[0..(if suggestions.len > 10: 10 else: suggestions.high)],
+#     (if suggestions.len > 10: " and " & $(suggestions.len-10) & " more" else: "")
+#   if suggestions.len == 0:
+#     result = null()
+#     return
+  #[
+    @[(section: ideSug, symKind: skType, qualifiedPath: system.ObjectConversionError, forth: ObjectConversionError, filePath: C:\Users\t0rmund\devel\Nim\lib\system\exceptions.nim, line: 106, column: 2, doc: , quality: 0, line: 106, prefix: Prefix), (section: ideSug, symKind: skType, qualifiedPath: system.ObjectAssignmentError, forth: ObjectAssignmentError, filePath: C:\Users\t0rmund\devel\Nim\lib\system\exceptions.nim, line: 104, column: 2, doc: , quality: 0, line: 104, prefix: Prefix), (section: ideSug, symKind: skType, qualifiedPath: system.RootObj, forth: RootObj, filePath: C:\Users\t0rmund\devel\Nim\lib\system.nim, line: 542, column: 2, doc: , quality: 0, line: 542, prefix: Substr), (section: ideSug, symKind: skType, qualifiedPath: widestrs.WideCStringObj, forth: WideCStringObj, filePath: C:\Users\t0rmund\devel\Nim\lib\system\widestrs.nim, line: 56, column: 4, doc: , quality: 0, line: 56, prefix: Substr), (section: ideSug, symKind: skType, qualifiedPath: json.JsonNodeObj, forth: JsonNodeObj, filePath: C:\Users\t0rmund\devel\Nim\lib\pure\json.nim, line: 167, column: 2, doc: , quality: 0, line: 167, prefix: Substr), (section: ideSug, symKind: skEnumField, qualifiedPath: json.JsonNodeKind.JObject, forth: JsonNodeKind, filePath: C:\Users\t0rmund\devel\Nim\lib\pure\json.nim, line: 163, column: 4, doc: , quality: 0, line: 163, prefix: Substr), (section: ideSug, symKind: skProc, qualifiedPath: json.newJObject, forth: proc (): JsonNode{.noSideEffect, gcsafe, locks: 0.}, filePath: C:\Users\t0rmund\devel\Nim\lib\pure\json.nim, line: 208, column: 5, doc: Creates a new `JObject JsonNode`, quality: 0, line: 208, prefix: Substr), (section: ideSug, symKind: skEnumField, qualifiedPath: parsejson.JsonEventKind.jsonObjectStart, forth: JsonEventKind, filePath: C:\Users\t0rmund\devel\Nim\lib\pure\parsejson.nim, line: 27, column: 4, doc: , quality: 0, line: 27, prefix: Substr), (section: ideSug, symKind: skVar, qualifiedPath: system.globalRaiseHook, forth: proc (e: ref Exception): bool{.gcsafe, locks: 0.}, filePath: C:\Users\t0rmund\devel\Nim\lib\system.nim, line: 1844, column: 2, doc: , quality: 0, line: 1844, prefix: Substr), (section: ideSug, symKind: skEnumField, qualifiedPath: parsejson.JsonEventKind.jsonObjectEnd, forth: JsonEventKind, filePath: C:\Users\t0rmund\devel\Nim\lib\pure\parsejson.nim, line: 28, column: 4, doc: , quality: 0, line: 28, prefix: Substr), (section: ideSug, symKind: skProc, qualifiedPath: system.GC_objectShouldBeCollectedSoon, forth: proc (o: ref), filePath: C:\Users\t0rmund\devel\Nim\lib\system\gc.nim, line: 923, column: 7, doc: , quality: 0, line: 923, prefix: Substr)]
+  ]#
+  # var r: Hover
+  # r.contents = MarkupContent(kind:MarkupKind.plaintext, value: )
       #       message.textDocumentRequest(TextDocumentPositionParams, hoverRequest):
       #         debugLog "Running equivalent of: def ", fileuri.toPath(), ";", filestash, ":",
       #           rawLine + 1, ":",
