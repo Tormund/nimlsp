@@ -15,7 +15,14 @@ type
   TextDocumentHoverRequest* = object
     params*: HoverParams
 
+  TextDocumentReferencesRequest* = object
+    params*: ReferenceParams
 
+  TextDocumentRenameRequest* = object
+    params*: RenameParams
+
+  TextDocumentDefinitionRequest* = object
+    params*: DefinitionParams
 
   DidOpenTextDocumentNotification* = object
     params*: DidOpenTextDocumentParams

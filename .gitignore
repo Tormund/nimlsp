@@ -1,4 +1,4 @@
 nimcache/
 nimlsp
 *.exe
-nimlsp.log
+*.log

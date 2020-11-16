@@ -420,7 +420,23 @@ type
 
   Hover* = object
     contents*: MarkupContent
+    # contents*: MarkedStringOption
     `range`*: Range
+
+  MarkedStringOption* = object
+    language*: string
+    value*: string
+
+  ReferenceParams* = object of TextDocumentPositionParams
+    context*: ReferenceContext
+
+  ReferenceContext* = object
+    includeDeclaration*: bool
+
+  RenameParams* = object of TextDocumentPositionParams
+    newName*: string
+
+  DefinitionParams* = object of TextDocumentPositionParams
 
   #   registrationOptions?: any
 
@@ -631,10 +647,6 @@ type
   #   triggerCharacters?: string[]
   #   resolveProvider?: bool
 
-  # MarkedStringOption:
-  #   language: string
-  #   value: string
-
   # SignatureHelp:
   #   signatures: SignatureInformation[]
   #   activeSignature?: int or float
@@ -652,11 +664,6 @@ type
   # SignatureHelpRegistrationOptions extends TextDocumentRegistrationOptions:
   #   triggerCharacters?: string[]
 
-  # ReferenceParams extends TextDocumentPositionParams:
-  #   context: ReferenceContext
-
-  # ReferenceContext:
-  #   includeDeclaration: bool
 
   # DocumentHighlight:
   #   "range": Range
@@ -748,8 +755,3 @@ type
   # DocumentOnTypeFormattingRegistrationOptions extends TextDocumentRegistrationOptions:
   #   firstTriggerCharacter: string
   #   moreTriggerCharacter?: string[]
-
-  # RenameParams:
-  #   textDocument: TextDocumentIdentifier
-  #   position: Position
-  #   newName: string
