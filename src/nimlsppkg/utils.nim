@@ -1,5 +1,5 @@
 import messageenums
-import strutils, uri, os, options
+import strutils, uri, os, options, hashes
 
 const storage = getTempDir() / "nimlsp"
 
@@ -15,6 +15,12 @@ template debugLog*(args: varargs[string, `$`]) =
   when defined(debugLogging):
     stderr.write(join args)
     stderr.write("\n")
+    logFile.write(join args)
+    logFile.write("\n\n")
+    logFile.flushFile()
+
+template writeLog*(args: varargs[string, `$`]) =
+  when defined(debugLogging):
     logFile.write(join args)
     logFile.write("\n\n")
     logFile.flushFile()
@@ -55,6 +61,9 @@ template textDocumentNotification*(message, kind, name, body) {.dirty.} =
           fileuri = name["textDocument"]["uri"].getStr
           filestash = storage / (hash(fileuri).toHex & ".nim" )
         body
+
+proc stashFile*(path: string): string =
+  storage / (hash(path).toHex & ".nim" )
 
 proc pathToUri*(path: string): string =
   # This is a modified copy of encodeUrl in the uri module. This doesn't encode

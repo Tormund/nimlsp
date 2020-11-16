@@ -1,4 +1,4 @@
-import streams, strutils, parseutils, json
+import streams, strutils, parseutils, json, options, tables
 
 type
   BaseProtocolError* = object of Exception
@@ -22,6 +22,26 @@ proc sendJson*(s: Stream, data: JsonNode) =
   var frame = newStringOfCap(1024)
   toUgly(frame, data)
   s.sendFrame(frame)
+
+proc toMessage*[T](msg: T): JsonNode =
+  when T is array | seq | set:
+    result = newJArray()
+    for v in msg:
+      result.add(v.toMessage())
+  elif T is Table|TableRef:
+    result = newJObject()
+    for k, v in msg:
+      result[k] = v.toMessage()
+  elif T is object | tuple:
+    result = newJObject()
+    for k, v in msg.fieldPairs:
+      when v is Option:
+        if v.isSome():
+          result[k] = get(v).toMessage()
+      else:
+        result[k] = v.toMessage()
+  else:
+    result = %msg
 
 proc readFrame*(s: Stream): TaintedString =
   var contentLen = -1

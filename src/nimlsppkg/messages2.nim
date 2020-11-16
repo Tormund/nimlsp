@@ -107,7 +107,7 @@ type
     version*: Option[int] # int | nil
     languageId*: Option[string] # SublimeLSP adds this field erroneously
 
-  TextDocumentPositionParams* = object
+  TextDocumentPositionParams* = object of RootObj
     textDocument*: TextDocumentIdentifier
     position*: Position
 
@@ -365,6 +365,63 @@ type
     uri*: DocumentUri
     name*: string
 
+
+  CompletionParams* = object of TextDocumentPositionParams
+    context*: Option[CompletionContext]
+
+  CompletionContext* = object
+    triggerKind*: int # CompletionTriggerKind
+    triggerCharacter*: Option[string]
+
+
+  CompletionList* = object
+    isIncomplete*: bool
+    `items`*: seq[CompletionItem]
+
+  CompletionItem* = object
+    label*: string
+    kind*: Option[int] # CompletionItemKind
+    tags*: Option[int] # CompletionItemTag
+    detail*: Option[string]
+    documentation*: Option[MarkupContent]
+    deprecated*: Option[bool]
+    preselect*: Option[bool]
+    sortText*: Option[string]
+    filterText*: Option[string]
+    insertText*: Option[string]
+    insertTextFormat*: Option[int] #InsertTextFormat
+    textEdit*: Option[TextEdit]
+    additionalTextEdits*: Option[seq[TextEdit]]
+    commitCharacters*: Option[seq[string]]
+    command*: Option[Command]
+    data: Option[JsonNode] #reserved
+
+
+  DidOpenTextDocumentParams* = object
+    textDocument*: TextDocumentItem
+
+  TextDocumentContentChangeEvent* = object
+    `range`*: Option[Range]
+    rangeLength*: Option[int]
+    text*: string
+
+  DidChangeTextDocumentParams* = object
+    textDocument*: VersionedTextDocumentIdentifier
+    contentChanges*: seq[TextDocumentContentChangeEvent]
+
+  DidCloseTextDocumentParams* = object
+    textDocument*: TextDocumentIdentifier
+
+  DidSaveTextDocumentParams* = object
+    textDocument*: TextDocumentIdentifier
+    text*: Option[string]
+
+  HoverParams* = object of TextDocumentPositionParams
+
+  Hover* = object
+    contents*: MarkupContent
+    `range`*: Range
+
   #   registrationOptions?: any
 
   # RegistrationParams:
@@ -550,17 +607,6 @@ type
   # ApplyWorkspaceEditResponse:
   #   applied: bool
 
-  # DidOpenTextDocumentParams:
-  #   textDocument: TextDocumentItem
-
-  # DidChangeTextDocumentParams:
-  #   textDocument: VersionedTextDocumentIdentifier
-  #   contentChanges: TextDocumentContentChangeEvent[]
-
-  # TextDocumentContentChangeEvent:
-  #   range?: Range
-  #   rangeLength?: int or float
-  #   text: string
 
   # TextDocumentChangeRegistrationOptions extends TextDocumentRegistrationOptions:
   #   syncKind: int or float
@@ -569,47 +615,17 @@ type
   #   textDocument: TextDocumentIdentifier
   #   reason: int # TextDocumentSaveReason
 
-  # DidSaveTextDocumentParams:
-  #   textDocument: TextDocumentIdentifier
-  #   text?: string
+
 
   # TextDocumentSaveRegistrationOptions extends TextDocumentRegistrationOptions:
   #   includeText?: bool
 
-  # DidCloseTextDocumentParams:
-  #   textDocument: TextDocumentIdentifier
 
   # PublishDiagnosticsParams:
   #   uri: string # DocumentUri
   #   diagnostics: Diagnostic[]
 
-  # CompletionParams extends TextDocumentPositionParams:
-  #   context?: CompletionContext
 
-  # CompletionContext:
-  #   triggerKind: int # CompletionTriggerKind
-  #   triggerCharacter?: string
-
-  # CompletionList:
-  #   isIncomplete: bool
-  #   "items": CompletionItem[]
-
-  # CompletionItem:
-  #   label: string
-  #   kind?: int # CompletionItemKind
-  #   detail?: string
-  #   documentation?: string or MarkupContent
-  #   deprecated?: bool
-  #   preselect?: bool
-  #   sortText?: string
-  #   filterText?: string
-  #   insertText?: string
-  #   insertTextFormat?: int #InsertTextFormat
-  #   textEdit?: TextEdit
-  #   additionalTextEdits?: TextEdit[]
-  #   commitCharacters?: string[]
-  #   command?: Command
-  #   data?: any
 
   # CompletionRegistrationOptions extends TextDocumentRegistrationOptions:
   #   triggerCharacters?: string[]
@@ -618,10 +634,6 @@ type
   # MarkedStringOption:
   #   language: string
   #   value: string
-
-  # Hover:
-  #   contents: string or MarkedStringOption or string[] or MarkedStringOption[] or MarkupContent
-  #   range?: Range
 
   # SignatureHelp:
   #   signatures: SignatureInformation[]

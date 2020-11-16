@@ -44,6 +44,9 @@ proc `$`*(suggestion: Suggest): string =
   result.add "prefix: " & $suggestion.prefix
   result.add ")"
 
+func isValid*(suggest: Suggest): bool =
+  $suggest.symKind.TSymKind != "skUnknown"
+
 func nimSymToLSPKind*(suggest: Suggest): CompletionItemKind =
   case $suggest.symKind.TSymKind:
   of "skConst": CompletionItemKind.Value

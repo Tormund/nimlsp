@@ -115,3 +115,5 @@ type
     refactorRewrite = "refactor.rewrite"
     source
     sourceOrganizeImports = "source.organizeImports"
+  CompletionItemTag* {.pure.} = enum
+    Deprecated = 1
