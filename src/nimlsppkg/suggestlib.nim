@@ -1,4 +1,4 @@
-import macros, os
+import macros, os, utils
 
 const explicitSourcePath {.strdefine.} = getCurrentCompilerExe().parentDir.parentDir
 
@@ -19,7 +19,11 @@ export initNimSuggest
 
 proc stopNimSuggest*(nimsuggest: NimSuggest): int = 42
 
+func isValid*(suggest: Suggest): bool =
+  $suggest.symKind.TSymKind != "skUnknown"
+
 proc `$`*(suggestion: Suggest): string =
+  if not suggestion.isValid or suggestion.qualifiedPath.len == 0: return
   let sep = ", "
   result = "(section: " & $suggestion.section
   result.add sep
@@ -34,18 +38,25 @@ proc `$`*(suggestion: Suggest): string =
   result.add "line: " & $suggestion.line
   result.add sep
   result.add "column: " & $suggestion.column
-  result.add sep
-  result.add "doc: " & $suggestion.doc
+  # result.add sep
+  # result.add "doc: " & $suggestion.doc
   result.add sep
   result.add "quality: " & $suggestion.quality
-  result.add sep
-  result.add "line: " & $suggestion.line
+  # result.add sep
+  # result.add "line: " & $suggestion.line
   result.add sep
   result.add "prefix: " & $suggestion.prefix
   result.add ")"
 
-func isValid*(suggest: Suggest): bool =
-  $suggest.symKind.TSymKind != "skUnknown"
+func useSnippet*(suggest: Suggest): bool =
+  $suggest.symKind.TSymKind in ["skMethod", "skProc", "skTemplate", "skType", "skFunc"]
+
+func isFrom*(sug: Suggest, file: string): bool =
+  let sp = file.splitFile()
+  for p in sug.qualifiedPath:
+    if p == sp.name:
+      return true
+  result = file.toPath == sug.filePath
 
 func nimSymToLSPKind*(suggest: Suggest): CompletionItemKind =
   case $suggest.symKind.TSymKind:
@@ -65,6 +76,27 @@ func nimSymToLSPKind*(suggest: Suggest): CompletionItemKind =
   of "skVar": CompletionItemKind.Field
   of "skFunc": CompletionItemKind.Function
   else: CompletionItemKind.Property
+
+func nimSymToLSPSym*(suggest: Suggest): SymbolKind =
+  case $suggest.symKind.TSymKind:
+  of "skConst": SymbolKind.Variable
+  of "skEnumField": SymbolKind.Enum
+  of "skForVar": SymbolKind.Variable
+  # of "skIterator": SymbolKind.Keyword
+  # of "skLabel": SymbolKind.Keyword
+  of "skLet": SymbolKind.Variable
+  of "skMacro": SymbolKind.Function
+  of "skMethod": SymbolKind.Method
+  of "skParam": SymbolKind.Variable
+  of "skProc": SymbolKind.Function
+  of "skResult": SymbolKind.Variable
+  of "skTemplate": SymbolKind.Function
+  of "skType": SymbolKind.Class
+  of "skVar": SymbolKind.Variable
+  of "skFunc": SymbolKind.Function
+  of "skField": SymbolKind.Field
+  of "skModule": SymbolKind.Module
+  else: SymbolKind.Property
 
 func nimSymDetails*(suggest: Suggest): string =
   case $suggest.symKind.TSymKind:
@@ -101,6 +133,7 @@ createFullCommand(con)
 createFullCommand(def)
 createFullCommand(use)
 createFullCommand(dus)
+# createFullCommand(known)
 createFileOnlyCommand(chk)
 #createFileOnlyCommand(`mod`)
 createFileOnlyCommand(highlight)

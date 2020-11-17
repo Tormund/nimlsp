@@ -24,6 +24,18 @@ type
   TextDocumentDefinitionRequest* = object
     params*: DefinitionParams
 
+  TextDocumentImplementationRequest* = object
+    params*: ImplementationParams
+
+  TextDocumentCodeLensRequest* = object
+    params*: CodeLensParams
+
+  TextDocumentSymbolRequest* = object
+    params*: DocumentSymbolParams
+
+  CompletionItemResolveRequest* = object
+    params*: CompletionItem
+
   DidOpenTextDocumentNotification* = object
     params*: DidOpenTextDocumentParams
 

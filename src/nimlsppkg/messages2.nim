@@ -290,7 +290,7 @@ type
     retriggerCharacters*: Option[seq[string]]
 
   CodeLensOptions* = object
-    resolveProvider*: Option[bool]
+    resolveProvider*: bool
 
   DocumentLinkOptions* = object
     resolveProvider*: Option[bool]
@@ -437,6 +437,30 @@ type
     newName*: string
 
   DefinitionParams* = object of TextDocumentPositionParams
+
+  ImplementationParams* = object of TextDocumentPositionParams
+
+  CodeLensParams* = object
+    textDocument*: TextDocumentIdentifier
+
+  DocumentSymbolParams* = object
+    textDocument*: TextDocumentIdentifier
+
+  SymbolInformation* = object
+    name*: string
+    kind*: int # SymbolKind
+    deprecated*: bool
+    location*: Location
+    containerName*: string
+
+  DocumentSymbol* = ref object
+    name*: string
+    detail*: Option[string]
+    kind*: int # SymbolKind
+    deprecated*: Option[bool]
+    `range`*: Range
+    selectionRange*: Range
+    children*: seq[DocumentSymbol]
 
   #   registrationOptions?: any
 
@@ -669,15 +693,8 @@ type
   #   "range": Range
   #   kind?: int # DocumentHighlightKind
 
-  # DocumentSymbolParams:
-  #   textDocument: TextDocumentIdentifier
 
-  # SymbolInformation:
-  #   name: string
-  #   kind: int # SymbolKind
-  #   deprecated?: bool
-  #   location: Location
-  #   containerName?: string
+
 
   # CodeActionParams:
   #   textDocument: TextDocumentIdentifier
@@ -686,9 +703,6 @@ type
 
   # CodeActionContext:
   #   diagnostics: Diagnostic[]
-
-  # CodeLensParams:
-  #   textDocument: TextDocumentIdentifier
 
   # CodeLens:
   #   "range": Range

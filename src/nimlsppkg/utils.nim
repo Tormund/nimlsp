@@ -9,12 +9,13 @@ discard existsOrCreateDir(storage)
 if not fileExists(auxProjFile):
   writeFile(auxProjFile, "")
 
+proc pathToUri*(path: string): string
+
 proc getStorage*(): string = storage
 
 when defined(debugLogging):
   var logPath = when defined(localLogFile): getAppDir() else: storage
   var logFile = open(logPath / "nimlsp_" & $int(epochTime()) & ".log", fmWrite)
-
 
 template debugLog*(args: varargs[string, `$`]) =
   when defined(debugLogging):
@@ -39,13 +40,7 @@ proc toPath*(s: string): string =
 proc stashFile*(path: string): string =
   storage / (hash(path.toPath).toHex & ".nim" )
 
-
 proc pathToUri*(path: string): string =
-  # This is a modified copy of encodeUrl in the uri module. This doesn't encode
-  # the / character, meaning a full file path can be passed in without breaking
-  # it.
-  debugLog "pathToUri> ", path
-
   when defined(windows):
     var path = path.replace("\\", "/")
   result = path
@@ -53,14 +48,6 @@ proc pathToUri*(path: string): string =
     result = "file://" & result
   else:
     result = "file:///" & result
-  debugLog "pathToUri< ", result
-
-
-# type Certainty {.pure.} = enum
-#   None,
-#   Folder,
-#   Cfg,
-#   Nimble
 
 proc isProjectFile(p: string): bool =
   let sp = p.splitFile()
@@ -91,27 +78,3 @@ proc getProjectFile*(path: string): string =
     result = auxProjFile
 
   debugLog("getProjectFile ", path, " r ", result, " isProjectFile ", result.isProjectFile, " isBuildFile ", result.isBuildFile)
-  # if result.len > 0 not result.isProjectFile:
-  #   debugLog("isBuildFile ", result, " ", )
-
-  # var
-  #   path = dir
-  #   certainty = Certainty.None
-  # while path.len > 0 and path != "/":
-  #   let
-  #     (dir, fname, ext) = path.splitFile()
-  #     current = fname & ext
-  #   if fileExists(path / current.addFileExt(".nim")) and certainty <= Certainty.Folder:
-  #     result = path / current.addFileExt(".nim")
-  #     certainty = Certainty.Folder
-  #   if fileExists(path / current.addFileExt(".nim")) and
-  #     (fileExists(path / current.addFileExt(".nim.cfg")) or
-  #     fileExists(path / current.addFileExt(".nims"))) and certainty <= Certainty.Cfg:
-  #     result = path / current.addFileExt(".nim")
-  #     certainty = Certainty.Cfg
-  #   if fileExists(path / current.addFileExt(".nimble")) and certainty <= Certainty.Nimble:
-  #     # Read the .nimble file and find the project file
-  #     discard
-  #   path = dir
-
-  debugLog("getProjectFile ", file, " projFile ", result)

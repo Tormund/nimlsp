@@ -1,5 +1,5 @@
 import nimlsppkg / [ baseprotocol, utfmapping, suggestlib, utils, protocol, messages2, messageenums, lsp ]
-import streams, tables, strutils, os, hashes, json, options, times, strformat
+import streams, tables, strutils, os, hashes, json, options, times, strformat, sets
 
 const
   version = block:
@@ -56,6 +56,28 @@ template makeSuggest(r: Lsp, cmd: untyped, msg: typed): seq[Suggest] =
     (if res.len > 10: " and " & $(res.len-10) & " more" else: "")
   res
 
+template makeSuggestForFile(r: Lsp, cmd: untyped, fileUri: string): seq[Suggest] =
+  debugLog("sug ", astToStr(cmd), " from ", fileUri)
+  let suggest = r.getSuggest(fileUri)
+  if suggest.isNil:
+    debugLog("suggest isnil ")
+    return
+  let res = r.getSuggest(fileUri).`cmd`(
+    fileUri.toPath(),
+    dirtyfile = fileUri.stashFile
+  )
+  debugLog "Found ", astToStr(cmd), " suggestions: ", res
+  res
+
+template location(sug: Suggest): Location =
+  Location(
+    uri: sug.filepath.pathToUri(),
+    `range`: Range(
+      start: Position(line: sug.line - 1, character: sug.column),
+      `end`: Position(line: sug.line - 1, character: sug.column + sug.qualifiedPath[^1].len)
+    )
+  )
+
 registerMessageHandler("initialize") do(r: Lsp, msg: JsonNode) -> JsonNode:
   debugLog "got initialize request ", msg
   var request = msg.to(InitializeRequest)
@@ -66,17 +88,18 @@ registerMessageHandler("initialize") do(r: Lsp, msg: JsonNode) -> JsonNode:
 
   resp.capabilities.textDocumentSync.openClose = true
   resp.capabilities.textDocumentSync.change = TextDocumentSyncKind.Full.int
-  resp.capabilities.completionProvider.resolveProvider = true
+  resp.capabilities.completionProvider.resolveProvider = false
   resp.capabilities.completionProvider.triggerCharacters = @[".", " "]
   resp.capabilities.hoverProvider = true
   resp.capabilities.declarationProvider = false
   resp.capabilities.definitionProvider = true
   # resp.capabilities.typeDefinitionProvider = true
-  # resp.capabilities.implementationProvider = true
+  resp.capabilities.implementationProvider = true
   resp.capabilities.referencesProvider = true
+  resp.capabilities.documentSymbolProvider = true
   # resp.capabilities.completionProvider.allCommitCharacters.none()
   # resp.capabilities.signatureHelpProvider.none()
-  # resp.capabilities.codeLensProvider.none()
+  # resp.capabilities.codeLensProvider = some(CodeLensOptions(resolveProvider: true))
   # resp.capabilities.documentLinkProvider.none()
   # resp.capabilities.documentOnTypeFormattingProvider.none()
   # resp.capabilities.executeCommandProvider.none()
@@ -88,7 +111,6 @@ registerMessageHandler("initialize") do(r: Lsp, msg: JsonNode) -> JsonNode:
 
 registerMessageHandler("textDocument/completion") do(r: Lsp, msg: JsonNode) -> JsonNode:
   var request = msg.to(TextDocumentCompletionRequest)
-  let fileUri = request.params.textDocument.uri
   let suggestions = r.makeSuggest(sug, request)
   var list: seq[CompletionItem]
   var sugLimit = 20
@@ -99,37 +121,115 @@ registerMessageHandler("textDocument/completion") do(r: Lsp, msg: JsonNode) -> J
     item.label = sug.qualifiedPath[^1]
     item.kind = some(nimSymToLSPKind(sug).int)
     item.detail = some(nimSymDetails(sug))
-    item.documentation = some(MarkupContent(kind:MarkupKind.markdown, value:sug.nimDocstring))
-    item.insertTextFormat = some(InsertTextFormat.PlainText.int)
+    item.documentation = some(MarkupContent(kind:MarkupKind.plaintext, value:sug.nimDocstring))
+    if sug.useSnippet:
+      item.insertTextFormat = some(InsertTextFormat.Snippet.int)
+    else:
+      item.insertTextFormat = some(InsertTextFormat.PlainText.int)
+
     list.add(item)
     if i >= sugLimit: break
   result = toMessage(CompletionList(isIncomplete: suggestions.len > sugLimit, `items`: list))
 
-registerMessageHandler("completionItem/resolve") do(r: Lsp, msg: JsonNode) -> JsonNode:
-  let request = msg.to(TextDocumentCompletionRequest)
-  let suggestions = r.makeSuggest(def, request)
-  if suggestions.len == 0:
-    result = newJNull()
+registerMessageHandler("textDocument/documentSymbol") do(r: Lsp, msg: JsonNode) -> JsonNode:
+  let request = msg.to(TextDocumentSymbolRequest)
+  let filePath = request.params.textDocument.uri
+  let suggestions = r.makeSuggestForFile(highlight, filePath)
 
-  var list: seq[CompletionItem]
-  var sugLimit = 20
-  for i, sug in suggestions:
-    if not sug.isValid: continue
+  var relations = initTable[string, DocumentSymbol]()
 
-    var item: CompletionItem
-    item.label = sug.qualifiedPath[^1]
-    item.kind = some(nimSymToLSPKind(sug).int)
-    item.detail = some(nimSymDetails(sug))
-    item.documentation = some(MarkupContent(kind:MarkupKind.markdown, value:sug.nimDocstring))
-    item.insertTextFormat = some(InsertTextFormat.PlainText.int)
-    list.add(item)
-    if i >= sugLimit: break
-  result = toMessage(CompletionList(isIncomplete: suggestions.len > sugLimit, `items`: list))
+  var systemSymbol = new(DocumentSymbol)
+  systemSymbol.name = "system"
+  systemSymbol.kind = CompletionItemKind.Module.int
+  systemSymbol.`range` = Range(
+    start: Position(line:0, character:0),
+    `end`: Position(line:0, character:1)
+  )
+  systemSymbol.selectionRange = systemSymbol.`range`
+  relations["system"] = systemSymbol
+
+  # var symbolsAUX: seq[DocumentSymbolAUX]
+  # symbolsAUX.add(DocumentSymbolAUX(symb: systemSymbol, qp: @["system"], id: @["system"].join(".").hash))
+  var symbols: seq[DocumentSymbol]
+  symbols.add(systemSymbol)
+
+  for sug in suggestions:
+    if not sug.isValid or sug.qualifiedPath.len == 0 or not sug.isFrom(filePath): continue
+    let id = sug.qualifiedPath.join(".")
+    if id in relations: continue
+
+    var si = new(DocumentSymbol)
+    si.name = sug.qualifiedPath[^1]
+    si.kind = sug.nimSymToLSPSym().int
+    si.`range` = Range(
+      start: Position(line: sug.line - 1, character: sug.column),
+      `end`: Position(line: sug.line - 1, character: sug.column + sug.qualifiedPath[^1].len)
+    )
+    si.selectionRange = si.`range`
+    symbols.add(si)
+    relations[id] = si
+    if sug.qualifiedPath.len == 1: continue
+    let parent = relations.getOrDefault(sug.qualifiedPath[0..^2].join("."))
+    if not parent.isNil:
+      parent.children.add(si)
+
+  if symbols.len == 0:
+    return newJNull()
+  result = toMessage(symbols)
+
+# registerMessageHandler("textDocument/codeLens") do(r: Lsp, msg: JsonNode) -> JsonNode:
+
+
+# go to definition does the same
+# registerMessageHandler("textDocument/implementation") do(r: Lsp, msg: JsonNode) -> JsonNode:
+#   var request = msg.to(TextDocumentImplementationRequest)
+#   debugLog("textDocument/implementation ", msg)
+#   let suggestions = r.makeSuggest(sug, request)
+#   var resp: seq[Location]
+#   for sug in suggestions:
+#     if sug.qualifiedPath.len == 0: continue
+#     resp.add(Location(
+#         uri: sug.filepath.pathToUri(),
+#         `range`: Range(
+#           start: Position(line: sug.line, character: sug.column),
+#           `end`: Position(line: sug.line, character: sug.column + sug.qualifiedPath[^1].len)
+#         )
+#       )
+#     )
+#   if resp.len == 0:
+#     return newJNull()
+#   result = toMessage(resp)
+
+#todo: think how to support it without nimsuggest ...
+# registerMessageHandler("completionItem/resolve") do(r: Lsp, msg: JsonNode) -> JsonNode:
+#   let request = msg.to(CompletionItemResolveRequest)
+#   let suggestions = r.makeSuggest(def, request)
+#   if suggestions.len == 0:
+#     result = newJNull()
+
+#   var list: seq[CompletionItem]
+#   var sugLimit = 20
+#   for i, sug in suggestions:
+#     if not sug.isValid: continue
+
+#     var item: CompletionItem
+#     item.label = sug.qualifiedPath[^1]
+#     item.kind = some(nimSymToLSPKind(sug).int)
+#     item.detail = some(nimSymDetails(sug))
+#     item.documentation = some(MarkupContent(kind:MarkupKind.markdown, value:sug.nimDocstring))
+#     item.insertTextFormat = some(InsertTextFormat.PlainText.int)
+#     list.add(item)
+#     if i >= sugLimit: break
+#   result = toMessage(CompletionList(isIncomplete: suggestions.len > sugLimit, `items`: list))
 
 registerMessageHandler("textDocument/hover") do(r: Lsp, msg: JsonNode) -> JsonNode:
   let request = msg.to(TextDocumentHoverRequest)
   let position = request.params.position
   let suggestions = r.makeSuggest(def, request)
+
+  # discard r.makeSuggestForFile(highlight, request.params.textDocument.uri)
+  # discard r.makeSuggestForFile(outline, request.params.textDocument.uri)
+  # discard r.makeSuggestForFile(known, request.params.textDocument.uri)
 
   if suggestions.len == 0:
     return newJNull()
@@ -141,8 +241,8 @@ registerMessageHandler("textDocument/hover") do(r: Lsp, msg: JsonNode) -> JsonNo
 
   var hoverVal = fmt"""
 {doc}
+`from {path}`
 ```nim
-# from {path}
 {defin}
 ```
 """
@@ -171,15 +271,7 @@ registerMessageHandler("textDocument/references") do(r: Lsp, msg: JsonNode) -> J
   for sug in suggestions:
     if sug.qualifiedPath.len == 0: continue
     if sug.section == ideUse or request.params.context.includeDeclaration:
-      resp.add(
-        Location(
-          uri: sug.filepath.pathToUri(),
-          `range`: Range(
-            start: Position(line: sug.line, character: sug.column),
-            `end`: Position(line: sug.line, character: sug.column + sug.qualifiedPath[^1].len)
-          )
-        )
-      )
+      resp.add(sug.location)
   result = toMessage(resp)
 
 registerMessageHandler("textDocument/rename") do(r: Lsp, msg: JsonNode) -> JsonNode:
@@ -214,14 +306,7 @@ registerMessageHandler("textDocument/definition") do(r: Lsp, msg: JsonNode) -> J
   var resp: seq[Location]
   for sug in suggestions:
     if sug.qualifiedPath.len == 0: continue
-    resp.add(Location(
-        uri: sug.filepath.pathToUri(),
-        `range`: Range(
-          start: Position(line: sug.line, character: sug.column),
-          `end`: Position(line: sug.line, character: sug.column + sug.qualifiedPath[^1].len)
-        )
-      )
-    )
+    resp.add(sug.location)
   if resp.len == 0:
     return newJNull()
   result = toMessage(resp)

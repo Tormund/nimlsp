@@ -28,6 +28,8 @@ proc toMessage*[T](msg: T): JsonNode =
     result = newJArray()
     for v in msg:
       result.add(v.toMessage())
+  elif T is ref:
+    result = msg[].toMessage()
   elif T is Table|TableRef:
     result = newJObject()
     for k, v in msg:
